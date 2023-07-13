@@ -27,6 +27,7 @@ Elem *StringTable<Elem>::add_string(char *s)
 // string is found, a pointer to the existing Entry for that string is 
 // returned.  If the string is not found, a new Entry is created and added
 // to the list.
+// 先判断string是否已经存在,不存在则尾插
 //
 template <class Elem>
 Elem *StringTable<Elem>::add_string(char *s, int maxchars)
