@@ -268,7 +268,7 @@ f(?i:alse) {
 }
 <StateString>"\"" {
   string_buf[string_buf_index] = '\0';
-  cool_yylval.symbol = new StringEntry(string_buf, string_buf_index, stringtable_index++);
+  cool_yylval.symbol = stringtable.add_string(string_buf);
   BEGIN(INITIAL);
   return (STR_CONST);
 }
@@ -290,7 +290,7 @@ f(?i:alse) {
   * Integers, non-empty strings of digits 0-9
   */
 [0-9]+ {
-  cool_yylval.symbol = new IntEntry(yytext, yyleng, stringtable_index++);
+  cool_yylval.symbol = inttable.add_string(yytext);
   return (INT_CONST);
 }
 
@@ -298,7 +298,7 @@ f(?i:alse) {
   * Type Identifiers, begin with a capital letter
   */
 [A-Z][_a-zA-z0-9]* {
-  cool_yylval.symbol = new IdEntry(yytext, yyleng, stringtable_index++);
+  cool_yylval.symbol = idtable.add_string(yytext);
   return (TYPEID);
 }
 
@@ -306,7 +306,7 @@ f(?i:alse) {
   * Object Identifiers, begin with a lower case letter
   */
 [a-z][_a-zA-z0-9]* {
-  cool_yylval.symbol = new IdEntry(yytext, yyleng, stringtable_index++);
+  cool_yylval.symbol = idtable.add_string(yytext);
   return (OBJECTID);
 }
 
