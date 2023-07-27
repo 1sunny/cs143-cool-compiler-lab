@@ -1,0 +1,2 @@
+#!/bin/csh -f
+./lexer $* | ./parser 2>&1 > parser.out

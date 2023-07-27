@@ -9,9 +9,11 @@
 //////////////////////////////////////////////////////////
 
 
+#include <symtab.h>
 #include "tree.h"
 #include "cool-tree.handcode.h"
 
+class ClassTable;
 
 // define the class for phylum
 // define simple phylum - Program
@@ -21,7 +23,7 @@ class Program_class : public tree_node {
 public:
    tree_node *copy()		 { return copy_Program(); }
    virtual Program copy_Program() = 0;
-
+   virtual void type_check(SymbolTable<Symbol, Entry> *O, ClassTable *classtable) = 0;
 #ifdef Program_EXTRAS
    Program_EXTRAS
 #endif
@@ -35,7 +37,10 @@ class Class__class : public tree_node {
 public:
    tree_node *copy()		 { return copy_Class_(); }
    virtual Class_ copy_Class_() = 0;
-
+   virtual Symbol get_name() = 0;
+   virtual Symbol get_parent() = 0;
+   virtual Features get_features() = 0;
+   virtual void type_check(SymbolTable<Symbol, Entry> *O, ClassTable *classtable) = 0;
 #ifdef Class__EXTRAS
    Class__EXTRAS
 #endif
@@ -49,7 +54,12 @@ class Feature_class : public tree_node {
 public:
    tree_node *copy()		 { return copy_Feature(); }
    virtual Feature copy_Feature() = 0;
-
+   virtual Symbol get_feature_type() = 0;
+   virtual Symbol get_name() = 0;
+   virtual Formals get_formals() = 0;
+   virtual Symbol get_return_type() = 0;
+   virtual Symbol get_type_decl() = 0;
+   virtual bool type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable) = 0;
 #ifdef Feature_EXTRAS
    Feature_EXTRAS
 #endif
@@ -63,7 +73,9 @@ class Formal_class : public tree_node {
 public:
    tree_node *copy()		 { return copy_Formal(); }
    virtual Formal copy_Formal() = 0;
-
+   virtual Symbol get_name() = 0;
+   virtual Symbol get_type() = 0;
+   virtual bool type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable) = 0;
 #ifdef Formal_EXTRAS
    Formal_EXTRAS
 #endif
@@ -77,7 +89,7 @@ class Expression_class : public tree_node {
 public:
    tree_node *copy()		 { return copy_Expression(); }
    virtual Expression copy_Expression() = 0;
-
+   virtual Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable) = 0;
 #ifdef Expression_EXTRAS
    Expression_EXTRAS
 #endif
@@ -91,7 +103,8 @@ class Case_class : public tree_node {
 public:
    tree_node *copy()		 { return copy_Case(); }
    virtual Case copy_Case() = 0;
-
+   virtual Symbol get_type() = 0;
+   virtual Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable) = 0;
 #ifdef Case_EXTRAS
    Case_EXTRAS
 #endif
@@ -135,7 +148,7 @@ public:
    }
    Program copy_Program();
    void dump(ostream& stream, int n);
-
+   void type_check(SymbolTable<Symbol, Entry> *O, ClassTable *classtable);
 #ifdef Program_SHARED_EXTRAS
    Program_SHARED_EXTRAS
 #endif
@@ -162,6 +175,10 @@ public:
    Class_ copy_Class_();
    void dump(ostream& stream, int n);
 
+   Symbol get_name();
+   Symbol get_parent();
+   Features get_features();
+   void type_check(SymbolTable<Symbol, Entry> *O, ClassTable *classtable);
 #ifdef Class__SHARED_EXTRAS
    Class__SHARED_EXTRAS
 #endif
@@ -187,7 +204,12 @@ public:
    }
    Feature copy_Feature();
    void dump(ostream& stream, int n);
-
+   Symbol get_feature_type();
+   Symbol get_name();
+   Formals get_formals();
+   Symbol get_return_type();
+   Symbol get_type_decl();
+    bool type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Feature_SHARED_EXTRAS
    Feature_SHARED_EXTRAS
 #endif
@@ -211,7 +233,12 @@ public:
    }
    Feature copy_Feature();
    void dump(ostream& stream, int n);
-
+   Symbol get_feature_type();
+   Symbol get_name();
+   Formals get_formals();
+   Symbol get_return_type();
+   Symbol get_type_decl();
+   bool type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Feature_SHARED_EXTRAS
    Feature_SHARED_EXTRAS
 #endif
@@ -233,7 +260,9 @@ public:
    }
    Formal copy_Formal();
    void dump(ostream& stream, int n);
-
+   Symbol get_name();
+   Symbol get_type();
+   bool type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Formal_SHARED_EXTRAS
    Formal_SHARED_EXTRAS
 #endif
@@ -257,7 +286,8 @@ public:
    }
    Case copy_Case();
    void dump(ostream& stream, int n);
-
+   Symbol get_type();
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Case_SHARED_EXTRAS
    Case_SHARED_EXTRAS
 #endif
@@ -279,7 +309,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -305,7 +335,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -329,7 +359,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -353,7 +383,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -375,7 +405,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -397,7 +427,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -417,7 +447,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -443,7 +473,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -465,7 +495,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -487,7 +517,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -509,7 +539,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -531,7 +561,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -551,7 +581,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -573,7 +603,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -595,7 +625,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -617,7 +647,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -637,7 +667,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -657,7 +687,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -677,7 +707,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -697,7 +727,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -717,7 +747,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -737,7 +767,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -755,7 +785,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
@@ -775,7 +805,7 @@ public:
    }
    Expression copy_Expression();
    void dump(ostream& stream, int n);
-
+   Symbol type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable);
 #ifdef Expression_SHARED_EXTRAS
    Expression_SHARED_EXTRAS
 #endif
