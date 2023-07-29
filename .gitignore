@@ -1,0 +1,11 @@
+*/**/*.o
+/handouts/*
+/handouts/**/*
+/lecture
+*/**/lexer
+*/**/parser
+*/**/semant
+*/**/cgen
+*/**/cool-parse.cc
+*/**/*.d
+.idea/

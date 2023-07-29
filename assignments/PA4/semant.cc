@@ -121,6 +121,7 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
     }
     name2class[name] = class_;
   }
+
   if (errors() == 0) {
     // build graph
     for (auto p: name2class) {
@@ -142,6 +143,7 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0), error_stream(cerr) {
       std::reverse(edge[name].begin(), edge[name].end());
     }
   }
+
   if (errors() == 0) {
     // topological sort
     std::queue<Symbol> que;
@@ -328,16 +330,16 @@ void program_class::semant() {
   initialize_constants();
 
   /* ClassTable constructor may do some semantic analysis */
-  ClassTable *classtable = new ClassTable(classes);
+  ClassTable *ct = new ClassTable(classes);
 
   /* some semantic analysis code may go here */
-  if (classtable->errors() == 0) {
-    classtable->handle_inheritance(Object, No_class);
+  if (ct->errors() == 0) {
+    ct->handle_inheritance(Object, No_class);
     SymbolTable<Symbol, Entry> *O = new SymbolTable<Symbol, Entry>();
-    type_check(O, classtable);
+    type_check(O, ct);
   }
 
-  if (classtable->errors()) {
+  if (ct->errors()) {
     cerr << "Compilation halted due to static semantic errors." << endl;
     exit(1);
   }
@@ -434,15 +436,15 @@ void ClassTable::handle_inheritance(Symbol u, Symbol parent) {
 }
 
 void
-program_class::type_check(SymbolTable<Symbol, Entry> *O, ClassTable *classtable) {
+program_class::type_check(SymbolTable<Symbol, Entry> *O, ClassTable *ct) {
   std::unordered_map<Symbol, bool> defined;
   for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
     Class_ class_ = classes->nth(i);
-    class_->type_check(O, classtable);
+    class_->type_check(O, ct);
     defined[class_->get_name()] = true;
   }
   if (defined.count(Main) == false) {
-    classtable->semant_error()
+    ct->semant_error()
             << "Class Main is not defined.\n";
   }
 }
@@ -459,40 +461,40 @@ Features class__class::get_features() {
   return features;
 }
 
-void class__class::type_check(SymbolTable<Symbol, Entry> *O, ClassTable *classtable) {
+void class__class::type_check(SymbolTable<Symbol, Entry> *O, ClassTable *ct) {
   O->enterscope();
   // add attrs to O
-  for (auto p: classtable->class_attrs[name]) {
+  for (auto p: ct->class_attrs[name]) {
     O->addid(p.first, p.second->get_type_decl());
   }
 
   bool main_defined = false;
   for (int i = features->first(); features->more(i); i = features->next(i)) {
     Feature feature = features->nth(i);
-    feature->type_check(O, this, classtable);
+    feature->type_check(O, this, ct);
     if (feature->get_name() == main_meth) {
       main_defined = true;
     }
   }
 
   if (name == Main && !main_defined) {
-    classtable->semant_error(get_filename(), this)
+    ct->semant_error(get_filename(), this)
             << "No 'main' method in class Main.\n";
   }
   O->exitscope();
 }
 
-bool formal_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *classtable) {
+bool formal_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_, ClassTable *ct) {
   if (name == self) {
-    classtable->semant_error(class_->get_filename(), this)
+    ct->semant_error(class_->get_filename(), this)
             << "'self' cannot be the name of a formal parameter.\n";
   }
 
   if (type_decl == SELF_TYPE) {
-    classtable->semant_error(class_->get_filename(), this)
+    ct->semant_error(class_->get_filename(), this)
             << "Formal parameter " << name << " cannot have type SELF_TYPE.\n";
-  } else if (classtable->name2class.count(type_decl) == false) {
-    classtable->semant_error(class_->get_filename(), this)
+  } else if (ct->name2class.count(type_decl) == false) {
+    ct->semant_error(class_->get_filename(), this)
             << "Class " << type_decl << " of formal parameter " << name << " is undefined.\n";
   }
   return true;
@@ -520,18 +522,18 @@ Symbol method_class::get_type_decl() {
 }
 
 bool method_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                              ClassTable *classtable) {
+                              ClassTable *ct) {
   O->enterscope();
   O->addid(self, SELF_TYPE);
   for (int i = formals->first(); formals->more(i); i = formals->next(i)) {
     Formal formal_i = formals->nth(i);
-    formal_i->type_check(O, class_, classtable);
+    formal_i->type_check(O, class_, ct);
 
     bool defined = false;
     for (int j = formals->first(); j < i; j = formals->next(j)) {
       Symbol formal_name = formals->nth(j)->get_name();
       if (formal_name == formal_i->get_name()) {
-        classtable->semant_error(class_->get_filename(), this)
+        ct->semant_error(class_->get_filename(), this)
                 << "Formal parameter " << formal_i->get_name() << " is multiply defined.\n";
         defined = true;
         break;
@@ -544,18 +546,18 @@ bool method_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
   }
 
   bool return_type_ok = true;
-  if (classtable->is_defined(return_type) == false) {
+  if (ct->is_defined(return_type) == false) {
     return_type_ok = false;
-    classtable->semant_error(class_->get_filename(), this)
+    ct->semant_error(class_->get_filename(), this)
             << "Undefined return type " << return_type << " in method " << name << ".\n";
   }
 
-  Symbol expr_type = expr->type_check(O, class_, classtable);
-  assert(classtable->is_defined(expr_type));
+  Symbol expr_type = expr->type_check(O, class_, ct);
+  assert(ct->is_defined(expr_type));
 
   // check subtype when return_type is correct
-  if (return_type_ok && classtable->is_subtype(expr_type, return_type, class_) == false) {
-    classtable->semant_error(class_->get_filename(), this)
+  if (return_type_ok && ct->is_subtype(expr_type, return_type, class_) == false) {
+    ct->semant_error(class_->get_filename(), this)
             << "Inferred return type " << expr_type << " of method " << name
             << " does not conform to declared return type " << return_type << ".\n";
   }
@@ -586,29 +588,29 @@ Symbol attr_class::get_type_decl() {
 }
 
 bool attr_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                            ClassTable *classtable) {
+                            ClassTable *ct) {
   O->enterscope();
   O->addid(self, SELF_TYPE);
   if (name == self) {
-    classtable->semant_error(class_->get_filename(), this)
+    ct->semant_error(class_->get_filename(), this)
             << "'self' cannot be the name of an attribute.\n";
   }
 
   Symbol T0 = type_decl;
   bool T0_ok = true;
-  if (classtable->is_defined(T0) == false) {
+  if (ct->is_defined(T0) == false) {
     T0_ok = false;
-    classtable->semant_error(class_->get_filename(), this)
+    ct->semant_error(class_->get_filename(), this)
             << "Class " << T0 << " of attribute " << name << " is undefined.\n";
   }
 
-  Symbol T1 = init->type_check(O, class_, classtable);
-  assert(T1 == No_type || classtable->is_defined(T1));
+  Symbol T1 = init->type_check(O, class_, ct);
+  assert(T1 == No_type || ct->is_defined(T1));
 
   if (T1 != No_type) {
     // check T1 <= T0 when T0 and T1 is correct
-    if (T0_ok && classtable->is_subtype(T1, T0, class_) == false) {
-      classtable->semant_error(class_->get_filename(), this)
+    if (T0_ok && ct->is_subtype(T1, T0, class_) == false) {
+      ct->semant_error(class_->get_filename(), this)
               << "Inferred type " << T1 << " of initialization of attribute " << name
               << " does not conform to declared type " << T0 << ".\n";
     }
@@ -632,6 +634,7 @@ bool ClassTable::is_subtype(Symbol t1, Symbol t2, Class_ class_) {
     return true;
   }
   assert(name2class.count(t1) && name2class.count(t2));
+
   Symbol cur = t1;
   while (true) {
     if (class_parent[cur] == t2) {
@@ -648,93 +651,95 @@ bool ClassTable::is_defined(Symbol type) {
 }
 
 Symbol assign_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                                ClassTable *classtable) {
+                                ClassTable *ct) {
   if (name == self) {
-    classtable->semant_error(class_->get_filename(), this)
+    ct->semant_error(class_->get_filename(), this)
             << "Cannot assign to 'self'.\n";
   }
 
   Symbol name_type = O->lookup(name); // T
   if (name_type == NULL) {
-    classtable->semant_error(class_->get_filename(), this)
+    ct->semant_error(class_->get_filename(), this)
             << "Assignment to undeclared variable " << name << ".\n";
   }
 
-  Symbol expr_type = expr->type_check(O, class_, classtable); // T'
-  assert(classtable->is_defined(expr_type));
+  Symbol expr_type = expr->type_check(O, class_, ct); // T'
+  assert(ct->is_defined(expr_type));
 
-  if (classtable->is_defined(name_type) &&
-      classtable->is_subtype(expr_type, name_type, class_) == false) { // T' <= T
-    classtable->semant_error(class_->get_filename(), this)
+  if (ct->is_defined(name_type) &&
+      ct->is_subtype(expr_type, name_type, class_) == false) { // T' <= T
+    ct->semant_error(class_->get_filename(), this)
             << "Type " << expr_type
             << " of assigned expression does not conform to declared type "
             << name_type << " of identifier " << name << ".\n";
   }
+
   set_type(expr_type);
   return type; // T'
 }
 
 Symbol static_dispatch_class::type_check(SymbolTable<Symbol, Entry> *O,
-                                         Class_ class_, ClassTable *classtable) {
+                                         Class_ class_, ClassTable *ct) {
   if (type_name == SELF_TYPE) {
-    classtable->semant_error(class_->get_filename(), this)
+    ct->semant_error(class_->get_filename(), this)
             << "Static dispatch to SELF_TYPE.\n";
     set_type(Object);
-  } else if (classtable->name2class.count(type_name) == false) {
-    classtable->semant_error(class_->get_filename(), this)
+  } else if (ct->name2class.count(type_name) == false) {
+    ct->semant_error(class_->get_filename(), this)
             << "Static dispatch to undefined class " << type_name << ".\n";
     set_type(Object);
   } else {
-    Symbol T0 = expr->type_check(O, class_, classtable);
-    if (classtable->is_defined(T0) && classtable->is_subtype(T0, type_name, class_)) {
+    Symbol T0 = expr->type_check(O, class_, ct);
+    if (ct->is_defined(T0) && ct->is_subtype(T0, type_name, class_)) {
       // T0 <= type_name
-      if (classtable->class_methods[type_name].count(name) == false) {
+      if (ct->class_methods[type_name].count(name) == false) {
         // Method not found
-        classtable->semant_error(class_->get_filename(), this)
+        ct->semant_error(class_->get_filename(), this)
                 << "Dispatch to undefined method " << name << ".\n";
         set_type(Object);
       } else {
-        Feature fea = classtable->class_methods[type_name][name];
+        Feature fea = ct->class_methods[type_name][name];
         if (actual->len() != fea->get_formals()->len()) {
           // wrong number of actual arguments
-          classtable->semant_error(class_->get_filename(), this)
+          ct->semant_error(class_->get_filename(), this)
                   << "Method " << name << " called with wrong number of arguments.\n";
           set_type(Object);
         } else {
           for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
             Formal formal_i = fea->get_formals()->nth(i);
-            Symbol Ti_ = actual->nth(i)->type_check(O, class_, classtable);
-            assert(classtable->is_defined(Ti_));
-            if (classtable->is_defined(formal_i->get_type()) &&
-                classtable->is_subtype(Ti_, formal_i->get_type(), class_) == false) {
+            Symbol Ti_ = actual->nth(i)->type_check(O, class_, ct);
+            assert(ct->is_defined(Ti_));
+            if (ct->is_defined(formal_i->get_type()) &&
+                ct->is_subtype(Ti_, formal_i->get_type(), class_) == false) {
               // wrong type of actual argument
-              classtable->semant_error(class_->get_filename(), this)
+              ct->semant_error(class_->get_filename(), this)
                       << "In call of method " << name << ", type " << Ti_ << " of parameter "
                       << formal_i->get_name() << " does not conform to declared type "
                       << formal_i->get_type() << ".\n";
             }
           }
           Symbol fea_return_type = fea->get_return_type();
-          set_type(fea_return_type == SELF_TYPE ? T0 : (classtable->is_defined(fea_return_type) ? fea_return_type
+          set_type(fea_return_type == SELF_TYPE ? T0 : (ct->is_defined(fea_return_type) ? fea_return_type
                                                                                                 : Object));
         }
       }
     } else {
-      classtable->semant_error(class_->get_filename(), this)
+      ct->semant_error(class_->get_filename(), this)
               << "Expression type " << T0 << " does not conform to declared static dispatch type " << type_name
               << ".\n";
       set_type(Object);
     }
   }
+
   return type;
 }
 
 Symbol dispatch_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                                  ClassTable *classtable) {
-  Symbol T0 = expr->type_check(O, class_, classtable);
+                                  ClassTable *ct) {
+  Symbol T0 = expr->type_check(O, class_, ct);
   Symbol T0_ = T0;
-  if (classtable->is_defined(T0) == false) {
-    classtable->semant_error(class_->get_filename(), this)
+  if (ct->is_defined(T0) == false) {
+    ct->semant_error(class_->get_filename(), this)
             << "Dispatch on undefined class " << T0 << ".\n";
     set_type(Object);
   } else {
@@ -743,38 +748,39 @@ Symbol dispatch_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
       T0_ = class_->get_name();
     }
     // T0_ is OK
-    if (classtable->class_methods[T0_].count(name) == false) {
+    if (ct->class_methods[T0_].count(name) == false) {
       // Method not found
-      classtable->semant_error(class_->get_filename(), this)
+      ct->semant_error(class_->get_filename(), this)
               << "Dispatch to undefined method " << name << ".\n";
       set_type(Object);
     } else {
-      Feature fea = classtable->class_methods[T0_][name];
+      Feature fea = ct->class_methods[T0_][name];
       if (actual->len() != fea->get_formals()->len()) {
         // wrong number of actual arguments
-        classtable->semant_error(class_->get_filename(), this)
+        ct->semant_error(class_->get_filename(), this)
                 << "Method " << name << " called with wrong number of arguments.\n";
         set_type(Object);
       } else {
         for (int i = actual->first(); actual->more(i); i = actual->next(i)) {
           Formal formal_i = fea->get_formals()->nth(i);
-          Symbol Ti_ = actual->nth(i)->type_check(O, class_, classtable);
-          assert(classtable->is_defined(Ti_));
-          if (classtable->is_defined(formal_i->get_type()) &&
-              classtable->is_subtype(Ti_, formal_i->get_type(), class_) == false) {
+          Symbol Ti_ = actual->nth(i)->type_check(O, class_, ct);
+          assert(ct->is_defined(Ti_));
+          if (ct->is_defined(formal_i->get_type()) &&
+              ct->is_subtype(Ti_, formal_i->get_type(), class_) == false) {
             // wrong type of actual argument
-            classtable->semant_error(class_->get_filename(), this)
+            ct->semant_error(class_->get_filename(), this)
                     << "In call of method " << name << ", type " << Ti_ << " of parameter "
                     << formal_i->get_name() << " does not conform to declared type "
                     << formal_i->get_type() << ".\n";
           }
         }
         Symbol fea_return_type = fea->get_return_type();
-        set_type(fea_return_type == SELF_TYPE ? T0 : (classtable->is_defined(fea_return_type) ? fea_return_type
+        set_type(fea_return_type == SELF_TYPE ? T0 : (ct->is_defined(fea_return_type) ? fea_return_type
                                                                                               : Object));
       }
     }
   }
+
   return type;
 }
 
@@ -805,29 +811,32 @@ Symbol ClassTable::lub(Symbol a, Symbol b, Class_ class_) {
 }
 
 Symbol cond_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                              ClassTable *classtable) {
-  Symbol pred_type = pred->type_check(O, class_, classtable);
+                              ClassTable *ct) {
+  Symbol pred_type = pred->type_check(O, class_, ct);
   if (pred_type != Bool) {
-    classtable->semant_error(class_->get_filename(), this)
+    ct->semant_error(class_->get_filename(), this)
             << "Predicate of 'if' does not have type Bool.\n";
   }
-  Symbol then_type = then_exp->type_check(O, class_, classtable);
-  Symbol else_type = else_exp->type_check(O, class_, classtable);
-  assert(classtable->is_defined(then_type));
-  assert(classtable->is_defined(else_type));
-  Symbol T = classtable->lub(then_type, else_type, class_);
+  Symbol then_type = then_exp->type_check(O, class_, ct);
+  Symbol else_type = else_exp->type_check(O, class_, ct);
+  assert(ct->is_defined(then_type));
+  assert(ct->is_defined(else_type));
+  Symbol T = ct->lub(then_type, else_type, class_);
+
   set_type(T);
   return type;
 }
 
 Symbol loop_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                              ClassTable *classtable) {
-  Symbol pred_type = pred->type_check(O, class_, classtable);
+                              ClassTable *ct) {
+  Symbol pred_type = pred->type_check(O, class_, ct);
   if (pred_type != Bool) {
-    classtable->semant_error(class_->get_filename(), this)
+    ct->semant_error(class_->get_filename(), this)
             << "Loop condition does not have type Bool.\n";
   }
-  body->type_check(O, class_, classtable);
+
+  body->type_check(O, class_, ct);
+
   set_type(Object);
   return type;
 }
@@ -837,83 +846,86 @@ Symbol branch_class::get_type() {
 }
 
 Symbol branch_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                                ClassTable *classtable) {
+                                ClassTable *ct) {
   O->enterscope();
   if (type_decl == SELF_TYPE) {
-    classtable->semant_error(class_->get_filename(), this)
+    ct->semant_error(class_->get_filename(), this)
             << "Identifier " << name << " declared with type SELF_TYPE in case branch.\n";
     // TODO
   }
-  if (classtable->is_defined(type_decl) == false) {
-    classtable->semant_error(class_->get_filename(), this)
+  if (ct->is_defined(type_decl) == false) {
+    ct->semant_error(class_->get_filename(), this)
             << "Class " << type_decl << " of case branch is undefined.\n";
   }
   if (name == self) {
-    classtable->semant_error(class_->get_filename(), this)
+    ct->semant_error(class_->get_filename(), this)
             << "'self' bound in 'case'.\n";
   }
+
   O->addid(name, type_decl);
-  Symbol T = expr->type_check(O, class_, classtable);
+  Symbol T = expr->type_check(O, class_, ct);
   O->exitscope();
-  assert(classtable->is_defined(T));
+  assert(ct->is_defined(T));
   return T;
 }
 
 Symbol typcase_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                                 ClassTable *classtable) {
-  expr->type_check(O, class_, classtable);
-  Symbol T = cases->nth(0)->type_check(O, class_, classtable);
-  assert(classtable->is_defined(T));
+                                 ClassTable *ct) {
+  expr->type_check(O, class_, ct);
+  Symbol T = cases->nth(0)->type_check(O, class_, ct);
+  assert(ct->is_defined(T));
 
   for (int i = cases->next(cases->first()); cases->more(i); i = cases->next(i)) {
-    Symbol Ti_ = cases->nth(i)->type_check(O, class_, classtable);
-    assert(classtable->is_defined(Ti_));
-    T = classtable->lub(T, Ti_, class_);
+    Symbol Ti_ = cases->nth(i)->type_check(O, class_, ct);
+    assert(ct->is_defined(Ti_));
+    T = ct->lub(T, Ti_, class_);
 
     for (int j = cases->first(); j < i; j = cases->next(j)) {
       if (cases->nth(i)->get_type() == cases->nth(j)->get_type()) {
-        classtable->semant_error(class_->get_filename(), cases->nth(i))
+        ct->semant_error(class_->get_filename(), cases->nth(i))
                 << "Duplicate branch " << cases->nth(i)->get_type() << " in case statement.\n";
         break;
       }
     }
   }
+
   set_type(T);
-  assert(classtable->is_defined(T));
+  assert(ct->is_defined(T));
   return type;
 }
 
 Symbol block_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                               ClassTable *classtable) {
+                               ClassTable *ct) {
   Symbol T;
   for (int i = body->first(); i < body->len(); i = body->next(i)) {
-    T = body->nth(i)->type_check(O, class_, classtable);
+    T = body->nth(i)->type_check(O, class_, ct);
   }
+
   set_type(T);
-  assert(classtable->is_defined(T));
+  assert(ct->is_defined(T));
   return type;
 }
 
 Symbol let_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                             ClassTable *classtable) {
+                             ClassTable *ct) {
   if (identifier == self) {
-    classtable->semant_error(class_->get_filename(), this)
+    ct->semant_error(class_->get_filename(), this)
             << "'self' cannot be bound in a 'let' expression.\n";
   }
 
   Symbol T0 = type_decl;
   bool T0_ok = true;
-  if (classtable->is_defined(T0) == false) {
+  if (ct->is_defined(T0) == false) {
     T0_ok = false;
-    classtable->semant_error(class_->get_filename(), this)
+    ct->semant_error(class_->get_filename(), this)
             << "Class " << type_decl << " of let-bound identifier " << identifier << " is undefined.\n";
   }
 
-  Symbol T1 = init->type_check(O, class_, classtable);
-  assert(T1 == No_type || classtable->is_defined(T1));
+  Symbol T1 = init->type_check(O, class_, ct);
+  assert(T1 == No_type || ct->is_defined(T1));
 
-  if (T1 != No_type && T0_ok && classtable->is_subtype(T1, T0, class_) == false) {
-    classtable->semant_error(class_->get_filename(), this)
+  if (T1 != No_type && T0_ok && ct->is_subtype(T1, T0, class_) == false) {
+    ct->semant_error(class_->get_filename(), this)
             << "Inferred type " << T1 << " of initialization of " << identifier
             << " does not conform to identifier's declared type " << type_decl << ".\n";
   }
@@ -921,8 +933,8 @@ Symbol let_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
   O->enterscope();
   O->addid(identifier, T0);
 
-  Symbol T2 = body->type_check(O, class_, classtable);
-  assert(classtable->is_defined(T2));
+  Symbol T2 = body->type_check(O, class_, ct);
+  assert(ct->is_defined(T2));
 
   O->exitscope();
 
@@ -931,12 +943,12 @@ Symbol let_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
 }
 
 Symbol op_type_check(Expression e1, Expression e2, SymbolTable<Symbol, Entry> *O,
-                     Class_ class_, ClassTable *classtable, tree_node *t, std::string op) {
-  Symbol e1_type = e1->type_check(O, class_, classtable);
-  Symbol e2_type = e2->type_check(O, class_, classtable);
+                     Class_ class_, ClassTable *ct, tree_node *t, std::string op) {
+  Symbol e1_type = e1->type_check(O, class_, ct);
+  Symbol e2_type = e2->type_check(O, class_, ct);
 
   if (e1_type != Int || e2_type != Int) {
-    classtable->semant_error(class_->get_filename(), t)
+    ct->semant_error(class_->get_filename(), t)
             << "non-Int arguments: " << e1_type << " " << op << " " << e2_type << "\n";
     return Object;
   }
@@ -947,39 +959,39 @@ Symbol op_type_check(Expression e1, Expression e2, SymbolTable<Symbol, Entry> *O
 }
 
 Symbol plus_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                              ClassTable *classtable) {
-  Symbol T = op_type_check(e1, e2, O, class_, classtable, this, "+");
+                              ClassTable *ct) {
+  Symbol T = op_type_check(e1, e2, O, class_, ct, this, "+");
   set_type(T);
   return type;
 }
 
 Symbol sub_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                             ClassTable *classtable) {
-  Symbol T = op_type_check(e1, e2, O, class_, classtable, this, "-");
+                             ClassTable *ct) {
+  Symbol T = op_type_check(e1, e2, O, class_, ct, this, "-");
   set_type(T);
   return type;
 }
 
 Symbol mul_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                             ClassTable *classtable) {
-  Symbol T = op_type_check(e1, e2, O, class_, classtable, this, "*");
+                             ClassTable *ct) {
+  Symbol T = op_type_check(e1, e2, O, class_, ct, this, "*");
   set_type(T);
   return type;
 }
 
 Symbol divide_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                                ClassTable *classtable) {
-  Symbol T = op_type_check(e1, e2, O, class_, classtable, this, "/");
+                                ClassTable *ct) {
+  Symbol T = op_type_check(e1, e2, O, class_, ct, this, "/");
   set_type(T);
   return type;
 }
 
 Symbol neg_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                             ClassTable *classtable) {
+                             ClassTable *ct) {
   set_type(Int);
-  Symbol e1_type = e1->type_check(O, class_, classtable);
+  Symbol e1_type = e1->type_check(O, class_, ct);
   if (e1_type != Int) {
-    classtable->semant_error(class_->get_filename(), this)
+    ct->semant_error(class_->get_filename(), this)
             << "Argument of '~' has type " << e1_type << " instead of Int.\n";
     set_type(Object);
   }
@@ -987,8 +999,8 @@ Symbol neg_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
 }
 
 Symbol lt_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                            ClassTable *classtable) {
-  Symbol T = op_type_check(e1, e2, O, class_, classtable, this, "<");
+                            ClassTable *ct) {
+  Symbol T = op_type_check(e1, e2, O, class_, ct, this, "<");
   set_type(T);
   return type;
 }
@@ -998,12 +1010,12 @@ bool need_same_type_compare(Symbol type) {
 }
 
 Symbol eq_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                            ClassTable *classtable) {
+                            ClassTable *ct) {
   set_type(Bool);
-  Symbol e1_type = e1->type_check(O, class_, classtable);
-  Symbol e2_type = e2->type_check(O, class_, classtable);
+  Symbol e1_type = e1->type_check(O, class_, ct);
+  Symbol e2_type = e2->type_check(O, class_, ct);
   if ((need_same_type_compare(e1_type) || need_same_type_compare(e2_type)) && e1_type != e2_type) {
-    classtable->semant_error(class_->get_filename(), this)
+    ct->semant_error(class_->get_filename(), this)
             << "Illegal comparison with a basic type.\n";
     set_type(Object);
   }
@@ -1011,18 +1023,18 @@ Symbol eq_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
 }
 
 Symbol leq_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                             ClassTable *classtable) {
-  Symbol T = op_type_check(e1, e2, O, class_, classtable, this, "<=");
+                             ClassTable *ct) {
+  Symbol T = op_type_check(e1, e2, O, class_, ct, this, "<=");
   set_type(T);
   return T;
 }
 
 Symbol comp_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                              ClassTable *classtable) {
+                              ClassTable *ct) {
   set_type(Bool);
-  Symbol e1_type = e1->type_check(O, class_, classtable);
+  Symbol e1_type = e1->type_check(O, class_, ct);
   if (e1_type != Bool) {
-    classtable->semant_error(class_->get_filename(), this)
+    ct->semant_error(class_->get_filename(), this)
             << "Argument of 'not' has type " << e1_type << " instead of Bool.\n";
     set_type(Object);
   }
@@ -1031,30 +1043,30 @@ Symbol comp_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
 
 Symbol
 int_const_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                            ClassTable *classtable) {
+                            ClassTable *ct) {
   set_type(Int);
   return type;
 }
 
 Symbol
 bool_const_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                             ClassTable *classtable) {
+                             ClassTable *ct) {
   set_type(Bool);
   return type;
 }
 
 Symbol
 string_const_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                               ClassTable *classtable) {
+                               ClassTable *ct) {
   set_type(Str);
   return type;
 }
 
 Symbol new__class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                              ClassTable *classtable) {
+                              ClassTable *ct) {
   set_type(type_name);
-  if (classtable->is_defined(type_name) == false) {
-    classtable->semant_error(class_->get_filename(), this)
+  if (ct->is_defined(type_name) == false) {
+    ct->semant_error(class_->get_filename(), this)
             << "'new' used with undefined class " << type_name << ".\n";
     set_type(Object);
   }
@@ -1062,20 +1074,20 @@ Symbol new__class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
 }
 
 Symbol isvoid_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                                ClassTable *classtable) {
-  e1->type_check(O, class_, classtable);
+                                ClassTable *ct) {
+  e1->type_check(O, class_, ct);
   set_type(Bool);
   return type;
 }
 
 Symbol object_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                                ClassTable *classtable) {
+                                ClassTable *ct) {
   if (name == self) {
     set_type(SELF_TYPE);
   } else {
     Symbol lookup_type = O->lookup(name);
     if (lookup_type == NULL) {
-      classtable->semant_error(class_->get_filename(), this)
+      ct->semant_error(class_->get_filename(), this)
               << "Undeclared identifier " << name << ".\n";
       set_type(Object);
     } else {
@@ -1094,6 +1106,6 @@ Symbol formal_class::get_type() {
 }
 
 Symbol no_expr_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
-                                 ClassTable *classtable) {
+                                 ClassTable *ct) {
   return No_type;
 }
