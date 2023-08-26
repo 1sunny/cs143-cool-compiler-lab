@@ -30,6 +30,7 @@ CFLAGS=-g -Wall -Wno-unused -Wno-write-strings -Wno-deprecated ${CPPINCLUDE} -DD
 FLEX=flex ${FFLAGS}
 BISON= bison ${BFLAGS}
 DEPEND = ${CC} -MM ${CPPINCLUDE}
+TESTFILE = test.cl
 
 source: ${SRC} ${TSRC} ${LIBS} lsource
 
@@ -71,6 +72,9 @@ clean-compile:
 
 %.d: %.cc ${SRC}
 	${SHELL} -ec '${DEPEND} $< | sed '\''s/\($*\.o\)[ :]*/\1 $@ : /g'\'' > $@'
+
+semant_res:
+	./lexer ${TESTFILE} | ./parser | ./semant > semant.out
 
 -include ${CFIL:.cc=.d}
 

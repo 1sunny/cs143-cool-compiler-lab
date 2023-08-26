@@ -52,7 +52,7 @@ print os.path.abspath(sys.argv[1])' $1`
 
 # fix command line arguments to have relative paths rather than absolute paths
 # if $1 is not a flag we assume it is a file
-if [ ${1:0:1} != "-" ]; then
+if [ "${1:0:1}" != "-" ]; then
     abspath=`getabspath "$1"`
     if [ "$abspath" == "ERROR" ]; then
         echo "$progname: $1: No such file or directory." >&2
