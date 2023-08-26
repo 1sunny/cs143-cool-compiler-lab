@@ -429,7 +429,7 @@ void ClassTable::handle_inheritance(Symbol u, Symbol parent) {
       }
     }
   }
-  // run a deap first search
+  // run a deep first search
   for (Symbol v: edge[u]) {
     handle_inheritance(v, u);
   }
@@ -851,7 +851,6 @@ Symbol branch_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
   if (type_decl == SELF_TYPE) {
     ct->semant_error(class_->get_filename(), this)
             << "Identifier " << name << " declared with type SELF_TYPE in case branch.\n";
-    // TODO
   }
   if (ct->is_defined(type_decl) == false) {
     ct->semant_error(class_->get_filename(), this)
@@ -1082,17 +1081,13 @@ Symbol isvoid_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
 
 Symbol object_class::type_check(SymbolTable<Symbol, Entry> *O, Class_ class_,
                                 ClassTable *ct) {
-  if (name == self) {
-    set_type(SELF_TYPE);
+  Symbol lookup_type = O->lookup(name);
+  if (lookup_type == NULL) {
+    ct->semant_error(class_->get_filename(), this)
+            << "Undeclared identifier " << name << ".\n";
+    set_type(Object);
   } else {
-    Symbol lookup_type = O->lookup(name);
-    if (lookup_type == NULL) {
-      ct->semant_error(class_->get_filename(), this)
-              << "Undeclared identifier " << name << ".\n";
-      set_type(Object);
-    } else {
-      set_type(lookup_type);
-    }
+    set_type(lookup_type);
   }
   return type;
 }

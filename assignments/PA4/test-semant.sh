@@ -13,7 +13,7 @@ fi
 
 # 检查命令行参数个数是否为1
 if ! [ "$#" -eq 1 ]; then
-  echo "one argument !"
+  echo "\none argument, file or directory !"
   exit 1
 fi
 
@@ -33,9 +33,9 @@ for infile in $infiles; do
   echo $infile
   ./lexer $infile | ./parser | ../../bin/semant > ref.out 2>&1
   # all test pass
-#  ./lexer $infile | ./parser | ./semant > my.out 2>&1
+  ./lexer $infile | ./parser | ./semant > my.out 2>&1
   # some test line number differ
-  ./mylexer $infile | ./myparser | ./semant > my.out 2>&1
+  #./mylexer $infile | ./myparser | ./semant > my.out 2>&1
 #  ./mysemant $infile 2>&1 |\
 #    awk '{
 #              reg = "^.*:[0-9]+:[ ]";
