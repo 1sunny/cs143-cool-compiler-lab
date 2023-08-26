@@ -1,8 +1,9 @@
 #include <assert.h>
 #include <stdio.h>
+#include <unordered_map>
+#include <vector>
 #include "emit.h"
 #include "cool-tree.h"
-#include "symtab.h"
 
 enum Basicness     {Basic, NotBasic};
 #define TRUE 1
@@ -11,18 +12,26 @@ enum Basicness     {Basic, NotBasic};
 class CgenClassTable;
 typedef CgenClassTable *CgenClassTableP;
 
+/*
 class CgenNode;
 typedef CgenNode *CgenNodeP;
+*/
 
-class CgenClassTable : public SymbolTable<Symbol,CgenNode> {
+struct SF {
+    Symbol class_name;
+    Symbol name;
+    Feature feature;
+};
+
+class CgenClassTable /*: public SymbolTable<Symbol,CgenNode>*/ {
 private:
-   List<CgenNode> *nds;
+   // List<CgenNode> *nds;
    ostream& str;
    int stringclasstag;
    int intclasstag;
    int boolclasstag;
-
-
+   int last_tag;
+   Classes classes;
 // The following methods emit code for
 // constants and global declarations.
 
@@ -38,17 +47,47 @@ private:
 // in the base class symbol table.
 
    void install_basic_classes();
+   /*
    void install_class(CgenNodeP nd);
    void install_classes(Classes cs);
    void build_inheritance_tree();
    void set_relations(CgenNodeP nd);
+    */
 public:
+   std::unordered_map<Symbol, Class_> name2class;
+   std::unordered_map<Symbol, int> degree;
+   std::unordered_map<Symbol, int> depth;
+   std::unordered_map<Symbol, int> tag_in;
+   std::unordered_map<Symbol, int> tag_out;
+   std::vector<Symbol> tag2name;
+   std::unordered_map<Symbol, Symbol> class_parent;
+   std::unordered_map<Symbol, std::vector<Symbol>> edge;
+   std::unordered_map<Symbol, std::vector<SF>> class_methods;
+   std::unordered_map<Symbol, std::vector<SF>> class_attrs;
+
    CgenClassTable(Classes, ostream& str);
    void code();
-   CgenNodeP root();
+   // CgenNodeP root();
+   void handle_inheritance(Symbol u, Symbol parent);
+
+    void code_prototype_objects();
+
+    void code_class_nameTab();
+
+    void code_dispatch_tables();
+
+    void code_object_initializer();
+
+    void code_class_methods();
+
+    void code_class_objTab();
+
+    void func_start(int& offset);
+
+    void func_end(int nargs);
 };
 
-
+/*
 class CgenNode : public class__class {
 private: 
    CgenNodeP parentnd;                        // Parent of class
@@ -67,6 +106,7 @@ public:
    CgenNodeP get_parentnd() { return parentnd; }
    int basic() { return (basic_status == Basic); }
 };
+ */
 
 class BoolConst 
 {

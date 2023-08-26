@@ -65,9 +65,10 @@
 // register names
 //
 #define ZERO "$zero"		// Zero register 
-#define ACC  "$a0"		// Accumulator 
+#define A0  "$a0"		// Accumulator
 #define A1   "$a1"		// For arguments to prim funcs 
-#define SELF "$s0"		// Ptr to self (callee saves) 
+#define S0 "$s0"		// Ptr to self (callee saves)
+#define S1 "$s1"		// callee saves
 #define T1   "$t1"		// Temporary 1 
 #define T2   "$t2"		// Temporary 2 
 #define T3   "$t3"		// Temporary 3 
@@ -106,3 +107,17 @@
 #define BGT      "\tbgt\t"
 
 
+#define OBJECT_COPY "Object.copy"
+#define EQUALITY_TEST "equality_test"
+#define DISPATCH_ABORT "_dispatch_abort"
+#define CASE_NO_MATCH "_case_abort"
+#define CASE_ON_VOID "_case_abort2"
+
+#define SYS_PRINT_INT 7
+#define CASE_ABORT 5
+
+#define CLASS_TAG_OFFSET 0
+#define OBJECT_SIZE_OFFSET 1
+#define DISPTAB_OFFSET 2
+
+int label_index = 0;
